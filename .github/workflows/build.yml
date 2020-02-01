@@ -3,26 +3,46 @@ on:
   push:
     tags:
     - '*'
+  schedule:
+  - cron: '0 0 * * *'
 jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+      if: github.event_name == 'schedule'
+    - name: Create tag
+      id: create_tag
+      run: |
+        if [[ "${{ github.event_name }}" == "schedule" ]]; then
+          tag=builds-$(date +%Y%m%d-%H%M%S)
+          git tag $tag
+          git push origin $tag
+        else
+          tag=$(basename "${{ github.ref }}")
+        fi
+        echo "::set-output name=tag::$tag"
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
+        tag_name: ${{ steps.create_tag.outputs.tag }}
+        release_name: ${{ steps.create_tag.outputs.tag }}
         prerelease: true
-    - name: Create upload_url.txt file
-      run: echo "${{ steps.create_release.outputs.upload_url }}" > upload_url.txt
+    - name: Create artifact files
+      run: |
+        mkdir info
+        echo "${{ steps.create_tag.outputs.tag }}" > info/tag
+        echo "${{ steps.create_release.outputs.upload_url }}" > info/upload_url
     - uses: actions/upload-artifact@v1
       with:
-        name: upload_url
-        path: upload_url.txt
+        name: info
+        path: info
 
   build:
     needs: [release]
@@ -34,11 +54,11 @@ jobs:
     steps:
     - uses: actions/download-artifact@v1
       with:
-        name: upload_url
+        name: info
     - name: Set upload_url
       id: release_info
       run: |
-        upload_url=$(cat upload_url/upload_url.txt)
+        upload_url=$(cat info/upload_url)
         echo "::set-output name=upload_url::$upload_url"
 
     - name: apt-get update on Ubuntu
@@ -98,8 +118,16 @@ jobs:
       with:
         ref: metadata
         fetch-depth: 0
+    - uses: actions/download-artifact@v1
+      with:
+        name: info
+    - name: Set tag
+      id: tag_info
+      run: |
+        tag=$(cat info/tag)
+        echo "::set-output name=tag::$tag"
     - run: |
-        echo $(basename ${{ github.ref }}) > latest_build.tag
+        echo "${{ steps.tag_info.outputs.tag }}" > latest_build.tag
         git config user.name "GitHub Actions"
         git config user.email automated@automated.org
         git commit -a -m 'Update latest_build.tag'
