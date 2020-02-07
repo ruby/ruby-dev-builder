@@ -31,11 +31,13 @@ jobs:
       with:
         tag_name: ${{ steps.create_tag.outputs.tag }}
         release_name: ${{ steps.create_tag.outputs.tag }}
+        draft: true
         prerelease: true
     - name: Create artifact files
       run: |
         mkdir info
         echo "${{ steps.create_tag.outputs.tag }}" > info/tag
+        echo "${{ steps.create_release.outputs.id }}" > info/release_id
         echo "${{ steps.create_release.outputs.upload_url }}" > info/upload_url
     - uses: actions/upload-artifact@v1
       with:
@@ -123,7 +125,14 @@ jobs:
       id: tag_info
       run: |
         tag=$(cat info/tag)
+        release_id=$(cat info/release_id)
         echo "::set-output name=tag::$tag"
+        echo "::set-output name=release_id::$release_id"
+    - uses: eregon/publish-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        release_id: ${{ steps.tag_info.outputs.release_id }}
     - run: |
         echo "${{ steps.tag_info.outputs.tag }}" > latest_build.tag
         git config user.name "GitHub Actions"
