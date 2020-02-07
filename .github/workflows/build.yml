@@ -132,3 +132,9 @@ jobs:
         git config user.email automated@automated.org
         git commit -a -m 'Update latest_build.tag'
         git push
+    - uses: eregon/keep-last-n-releases@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        n: 3
+        last_tag_file: latest_build.tag
