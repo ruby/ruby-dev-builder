@@ -56,7 +56,7 @@ jobs:
       with:
         name: info
     - name: Set upload_url
-      id: release_info
+      id: upload_info
       run: |
         upload_url=$(cat info/upload_url)
         echo "::set-output name=upload_url::$upload_url"
@@ -104,13 +104,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.release_info.outputs.upload_url }}
+        upload_url: ${{ steps.upload_info.outputs.upload_url }}
         asset_path: ruby-head-${{ matrix.os }}.tar.gz
         asset_name: ruby-head-${{ matrix.os }}.tar.gz
         asset_content_type: application/gzip
 
   metadata:
-    name: Update metadata about the last build
+    name: Publish Release
     needs: [build]
     runs-on: ubuntu-latest
     steps:
@@ -121,8 +121,8 @@ jobs:
     - uses: actions/download-artifact@v1
       with:
         name: info
-    - name: Set tag
-      id: tag_info
+    - name: Set publish_info
+      id: publish_info
       run: |
         tag=$(cat info/tag)
         release_id=$(cat info/release_id)
@@ -132,9 +132,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        release_id: ${{ steps.tag_info.outputs.release_id }}
+        release_id: ${{ steps.publish_info.outputs.release_id }}
     - run: |
-        echo "${{ steps.tag_info.outputs.tag }}" > latest_build.tag
+        echo "${{ steps.publish_info.outputs.tag }}" > latest_build.tag
         git config user.name "GitHub Actions"
         git config user.email automated@automated.org
         git commit -a -m 'Update latest_build.tag'
