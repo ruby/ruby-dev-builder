@@ -32,7 +32,7 @@ jobs:
         tag_name: ${{ steps.create_tag.outputs.tag }}
         release_name: ${{ steps.create_tag.outputs.tag }}
         draft: true
-        prerelease: true
+        prerelease: false
     - name: Create artifact files
       run: |
         mkdir info
