@@ -88,6 +88,8 @@ jobs:
     - run: ./configure --prefix=$HOME/.rubies/ruby-head --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       if: matrix.os == 'macos-latest'
     - run: make -j4
+    - run: make update-gems
+    - run: make extract-gems
     - run: make install
 
     - name: Create archive
@@ -95,6 +97,8 @@ jobs:
 
     # Test
     - run: ~/.rubies/ruby-head/bin/ruby --version
+    - run: ~/.rubies/ruby-head/bin/gem --version
+    - run: ~/.rubies/ruby-head/bin/rake --version
     - run: ~/.rubies/ruby-head/bin/ruby -ropen-uri -e 'puts open("https://rubygems.org/") { |f| f.read(1024) }'
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j8"
