@@ -96,10 +96,22 @@ jobs:
       run: tar czf ruby-head-${{ matrix.os }}.tar.gz -C ~/.rubies ruby-head
 
     # Test
-    - run: ~/.rubies/ruby-head/bin/ruby --version
-    - run: ~/.rubies/ruby-head/bin/gem --version
-    - run: ~/.rubies/ruby-head/bin/rake --version
-    - run: ~/.rubies/ruby-head/bin/ruby -ropen-uri -e 'puts open("https://rubygems.org/") { |f| f.read(1024) }'
+    - run: echo "::add-path::$HOME/.rubies/ruby-head/bin"
+    - uses: actions/checkout@v2
+      with:
+        path: test_files
+    - run: mv test_files/Gemfile .
+    - run: ruby --version
+    - run: gem --version
+    - run: rake --version
+    - run: ruby -ropen-uri -e 'puts open("https://rubygems.org/") { |f| f.read(1024) }'
+    - run: gem install json:2.2.0 --no-document
+    - run: bundle --version
+    - run: bundle install
+    - run: bundle exec rake --version
+    - name: Subprocess test
+      run: ruby -e 'p RbConfig::CONFIG["CPPFLAGS"]; def Warning.warn(s); raise s; end; system RbConfig.ruby, "-e", "p :OK"'
+
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j8"
 
