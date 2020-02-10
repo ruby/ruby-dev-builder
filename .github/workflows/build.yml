@@ -116,7 +116,7 @@ jobs:
     - run: make test-all TESTS="-j8"
 
     - name: Upload Built Ruby
-      uses: actions/upload-release-asset@v1.0.1
+      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
