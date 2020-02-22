@@ -36,7 +36,6 @@ jobs:
     - name: Create artifact files
       run: |
         mkdir info
-        echo "${{ steps.create_tag.outputs.tag }}" > info/tag
         echo "${{ steps.create_release.outputs.id }}" > info/release_id
         echo "${{ steps.create_release.outputs.upload_url }}" > info/upload_url
     - uses: actions/upload-artifact@v1
@@ -130,34 +129,21 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        ref: metadata
-        fetch-depth: 0
     - uses: actions/download-artifact@v1
       with:
         name: info
     - name: Set publish_info
       id: publish_info
       run: |
-        tag=$(cat info/tag)
         release_id=$(cat info/release_id)
-        echo "::set-output name=tag::$tag"
         echo "::set-output name=release_id::$release_id"
     - uses: eregon/publish-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         release_id: ${{ steps.publish_info.outputs.release_id }}
-    - run: |
-        echo "${{ steps.publish_info.outputs.tag }}" > latest_build.tag
-        git config user.name "GitHub Actions"
-        git config user.email automated@automated.org
-        git commit -a -m 'Update latest_build.tag'
-        git push
     - uses: eregon/keep-last-n-releases@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         n: 3
-        last_tag_file: latest_build.tag
