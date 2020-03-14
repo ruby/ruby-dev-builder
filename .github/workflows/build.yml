@@ -87,8 +87,6 @@ jobs:
     - run: ./configure --prefix=$HOME/.rubies/ruby-head --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       if: matrix.os == 'macos-latest'
     - run: make -j4
-    - run: make update-gems
-    - run: make extract-gems
     - run: make install
 
     - name: Create archive
