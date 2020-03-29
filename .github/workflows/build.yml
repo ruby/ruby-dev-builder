@@ -84,9 +84,9 @@ jobs:
     - run: chmod 755 $HOME # https://github.com/actions/virtual-environments/issues/267
     - run: mkdir -p ~/.rubies
     - run: autoconf
-    - run: ./configure --prefix=$HOME/.rubies/ruby-head --disable-install-doc
+    - run: ./configure --prefix=$HOME/.rubies/ruby-head --enable-shared --disable-install-doc
       if: startsWith(matrix.os, 'ubuntu')
-    - run: ./configure --prefix=$HOME/.rubies/ruby-head --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+    - run: ./configure --prefix=$HOME/.rubies/ruby-head --enable-shared --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       if: matrix.os == 'macos-latest'
     - run: make -j4
     - run: make install
