@@ -50,6 +50,8 @@ jobs:
       matrix:
         os: [ ubuntu-16.04, ubuntu-18.04, macos-latest ]
     runs-on: ${{ matrix.os }}
+    env:
+      CPPFLAGS: "-DENABLE_PATH_CHECK=0" # https://github.com/actions/virtual-environments/issues/267
     steps:
     - uses: actions/download-artifact@v1
       with:
