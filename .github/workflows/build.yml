@@ -101,6 +101,7 @@ jobs:
         path: test_files
     - run: mv test_files/Gemfile .
     - run: ruby --version
+    - run: ruby -e 'pp RbConfig::CONFIG'
     - run: gem --version
     - run: rake --version
     - run: ruby -ropen-uri -e 'puts open("https://rubygems.org/") { |f| f.read(1024) }'
