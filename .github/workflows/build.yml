@@ -49,9 +49,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-16.04, ubuntu-18.04, macos-latest ]
+        name: [ head, debug ]
     runs-on: ${{ matrix.os }}
-    env:
-      CPPFLAGS: "-DENABLE_PATH_CHECK=0" # https://github.com/actions/virtual-environments/issues/267
     steps:
     - uses: actions/download-artifact@v1
       with:
@@ -80,22 +79,33 @@ jobs:
       with:
         repository: ruby/ruby
 
+    # ENABLE_PATH_CHECK=0: https://github.com/actions/virtual-environments/issues/267
+    - name: Set configure flags (head)
+      run: |
+        echo "::set-env name=cppflags::-DENABLE_PATH_CHECK=0"
+      if: matrix.name == 'head'
+    - name: Set configure flags (debug)
+      run: |
+        echo "::set-env name=cppflags::-DENABLE_PATH_CHECK=0 -DRUBY_DEBUG=1"
+        echo "::set-env name=optflags::-O3 -fno-inline"
+      if: matrix.name == 'debug'
+
     # Build
     - run: chmod 755 $HOME # https://github.com/actions/virtual-environments/issues/267
     - run: mkdir -p ~/.rubies
     - run: autoconf
-    - run: ./configure --prefix=$HOME/.rubies/ruby-head --enable-shared --disable-install-doc
+    - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc
       if: startsWith(matrix.os, 'ubuntu')
-    - run: ./configure --prefix=$HOME/.rubies/ruby-head --enable-shared --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+    - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       if: matrix.os == 'macos-latest'
     - run: make -j4
     - run: make install
 
     - name: Create archive
-      run: tar czf ruby-head-${{ matrix.os }}.tar.gz -C ~/.rubies ruby-head
+      run: tar czf ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
 
     # Test
-    - run: echo "::add-path::$HOME/.rubies/ruby-head/bin"
+    - run: echo "::add-path::$HOME/.rubies/ruby-${{ matrix.name }}/bin"
     - uses: actions/checkout@v2
       with:
         path: test_files
@@ -110,7 +120,7 @@ jobs:
     - run: bundle install
     - run: bundle exec rake --version
     - name: Subprocess test
-      run: ruby -e 'p RbConfig::CONFIG["CPPFLAGS"]; def Warning.warn(s); raise s; end; system RbConfig.ruby, "-e", "p :OK"'
+      run: ruby -e 'p RbConfig::CONFIG["cppflags"]; def Warning.warn(s); raise s; end; system RbConfig.ruby, "-e", "p :OK"'
 
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j8"
@@ -121,8 +131,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.upload_info.outputs.upload_url }}
-        asset_path: ruby-head-${{ matrix.os }}.tar.gz
-        asset_name: ruby-head-${{ matrix.os }}.tar.gz
+        asset_path: ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz
+        asset_name: ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz
         asset_content_type: application/gzip
 
   metadata:
