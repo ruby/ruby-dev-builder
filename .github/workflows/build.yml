@@ -105,6 +105,9 @@ jobs:
       run: tar czf ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
 
     # Test
+    - run: make test-spec MSPECOPT=-j
+    - run: make test-all TESTS="-j8"
+
     - run: echo "::add-path::$HOME/.rubies/ruby-${{ matrix.name }}/bin"
     - uses: actions/checkout@v2
       with:
@@ -121,9 +124,6 @@ jobs:
     - run: bundle exec rake --version
     - name: Subprocess test
       run: ruby -e 'p RbConfig::CONFIG["cppflags"]; def Warning.warn(s); raise s; end; system RbConfig.ruby, "-e", "p :OK"'
-
-    - run: make test-spec MSPECOPT=-j
-    - run: make test-all TESTS="-j8"
 
     - name: Upload Built Ruby
       uses: actions/upload-release-asset@v1
