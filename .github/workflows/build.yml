@@ -106,7 +106,7 @@ jobs:
 
     # Test
     - run: make test-spec MSPECOPT=-j
-    - run: make test-all TESTS="-j8"
+    - run: make test-all TESTS="-j4"
 
     - run: echo "::add-path::$HOME/.rubies/ruby-${{ matrix.name }}/bin"
     - uses: actions/checkout@v2
