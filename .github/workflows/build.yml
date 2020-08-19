@@ -117,7 +117,7 @@ jobs:
     - run: ruby -e 'pp RbConfig::CONFIG'
     - run: gem --version
     - run: rake --version
-    - run: ruby -ropen-uri -e 'puts open("https://rubygems.org/") { |f| f.read(1024) }'
+    - run: ruby -ropen-uri -e 'puts URI.send(:open, "https://rubygems.org/") { |f| f.read(1024) }'
     - run: gem install json:2.2.0 --no-document
     - run: bundle --version
     - run: bundle install
