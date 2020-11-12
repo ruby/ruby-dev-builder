@@ -82,12 +82,12 @@ jobs:
     # ENABLE_PATH_CHECK=0: https://github.com/actions/virtual-environments/issues/267
     - name: Set configure flags (head)
       run: |
-        echo "::set-env name=cppflags::-DENABLE_PATH_CHECK=0"
+        echo "cppflags=-DENABLE_PATH_CHECK=0" >> $GITHUB_ENV
       if: matrix.name == 'head'
     - name: Set configure flags (debug)
       run: |
-        echo "::set-env name=cppflags::-DENABLE_PATH_CHECK=0 -DRUBY_DEBUG=1"
-        echo "::set-env name=optflags::-O3 -fno-inline"
+        echo "cppflags=-DENABLE_PATH_CHECK=0 -DRUBY_DEBUG=1" >> $GITHUB_ENV
+        echo "optflags=-O3 -fno-inline" >> $GITHUB_ENV
       if: matrix.name == 'debug'
 
     # Build
@@ -108,7 +108,7 @@ jobs:
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j4"
 
-    - run: echo "::add-path::$HOME/.rubies/ruby-${{ matrix.name }}/bin"
+    - run: echo "$HOME/.rubies/ruby-${{ matrix.name }}/bin" >> $GITHUB_PATH
     - uses: actions/checkout@v2
       with:
         path: test_files
