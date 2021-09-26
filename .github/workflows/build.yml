@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest ]
+        os: [ ubuntu-18.04, ubuntu-20.04, macos-10.15 ]
         name: [ head, debug ]
     runs-on: ${{ matrix.os }}
     steps:
@@ -60,6 +60,12 @@ jobs:
       run: |
         upload_url=$(cat info/upload_url)
         echo "::set-output name=upload_url::$upload_url"
+    - name: Set platform
+      id: platform
+      run: |
+        platform=${{ matrix.os }}
+        platform=${platform/macos-*/macos-latest}
+        echo "::set-output name=platform::$platform"
 
     - name: apt-get update on Ubuntu
       run: sudo apt-get update
@@ -67,9 +73,9 @@ jobs:
     - run: sudo apt-get install -y --no-install-recommends ruby bison libyaml-dev libgdbm-dev libreadline-dev libncurses5-dev
       if: startsWith(matrix.os, 'ubuntu')
     - run: brew install autoconf automake
-      if: matrix.os == 'macos-latest'
+      if: startsWith(matrix.os, 'macos')
     - name: Disable Firewall # Needed for TestSocket#test_udp_server in test-all
-      if: matrix.os == 'macos-latest'
+      if: startsWith(matrix.os, 'macos')
       run: |
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
@@ -97,12 +103,12 @@ jobs:
     - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc
       if: startsWith(matrix.os, 'ubuntu')
     - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
-      if: matrix.os == 'macos-latest'
+      if: startsWith(matrix.os, 'macos')
     - run: make -j4
     - run: make install
 
     - name: Create archive
-      run: tar czf ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
+      run: tar czf ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
 
     # Test
     - run: make test-spec MSPECOPT=-j
@@ -131,8 +137,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.upload_info.outputs.upload_url }}
-        asset_path: ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz
-        asset_name: ruby-${{ matrix.name }}-${{ matrix.os }}.tar.gz
+        asset_path: ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz
+        asset_name: ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz
         asset_content_type: application/gzip
 
   metadata:
