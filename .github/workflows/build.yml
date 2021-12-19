@@ -18,7 +18,7 @@ jobs:
       id: create_tag
       run: |
         if [[ "${{ github.event_name }}" == "schedule" ]]; then
-          tag=builds-$(date +%Y%m%d-%H%M%S)
+          tag=v$(date +%Y%m%d.%H%M%S)
         else
           tag=$(basename "${{ github.ref }}")
         fi
