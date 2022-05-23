@@ -100,12 +100,14 @@ jobs:
     - run: chmod 755 $HOME # https://github.com/actions/virtual-environments/issues/267
     - run: mkdir -p ~/.rubies
     - run: ./autogen.sh
-    - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc
+    - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc --enable-yjit
       if: startsWith(matrix.os, 'ubuntu')
-    - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
+    - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc --enable-yjit --with-openssl-dir=$(brew --prefix openssl@1.1) --with-readline-dir=$(brew --prefix readline)
       if: startsWith(matrix.os, 'macos')
     - run: make -j4
     - run: make install
+
+    - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
 
     - name: Create archive
       run: tar czf ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
