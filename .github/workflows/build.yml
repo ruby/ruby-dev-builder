@@ -107,12 +107,11 @@ jobs:
     - run: make -j4
     - run: make install
 
-    - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
-
     - name: Create archive
       run: tar czf ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
 
     # Test
+    - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j4"
 
