@@ -111,7 +111,6 @@ jobs:
       run: tar czf ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
 
     # Test
-    - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j4"
 
@@ -122,6 +121,7 @@ jobs:
     - run: mv test_files/Gemfile .
     - run: ruby --version
     - run: ruby -e 'pp RbConfig::CONFIG'
+    - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
     - run: gem --version
     - run: rake --version
     - run: ruby -ropen-uri -e 'puts URI.send(:open, "https://rubygems.org/") { |f| f.read(1024) }'
