@@ -9,6 +9,9 @@ jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -33,15 +36,6 @@ jobs:
         release_name: ${{ steps.create_tag.outputs.tag }}
         draft: true
         prerelease: false
-    - name: Create artifact files
-      run: |
-        mkdir info
-        echo "${{ steps.create_release.outputs.id }}" > info/release_id
-        echo "${{ steps.create_release.outputs.upload_url }}" > info/upload_url
-    - uses: actions/upload-artifact@v1
-      with:
-        name: info
-        path: info
 
   build:
     needs: [release]
@@ -52,14 +46,6 @@ jobs:
         name: [ head, debug ]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/download-artifact@v1
-      with:
-        name: info
-    - name: Set upload_url
-      id: upload_info
-      run: |
-        upload_url=$(cat info/upload_url)
-        echo "::set-output name=upload_url::$upload_url"
     - name: Set platform
       id: platform
       run: |
@@ -137,29 +123,21 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.upload_info.outputs.upload_url }}
+        upload_url: ${{ needs.release.outputs.upload_url }}
         asset_path: ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz
         asset_name: ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz
         asset_content_type: application/gzip
 
   metadata:
     name: Publish Release
-    needs: [build]
+    needs: [release, build]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v1
-      with:
-        name: info
-    - name: Set publish_info
-      id: publish_info
-      run: |
-        release_id=$(cat info/release_id)
-        echo "::set-output name=release_id::$release_id"
     - uses: eregon/publish-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        release_id: ${{ steps.publish_info.outputs.release_id }}
+        release_id: ${{ needs.release.outputs.release_id }}
     - uses: eregon/keep-last-n-releases@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
