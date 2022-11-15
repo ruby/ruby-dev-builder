@@ -58,7 +58,7 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu')
     - run: sudo apt-get install -y --no-install-recommends ruby bison libyaml-dev libgdbm-dev libreadline-dev libncurses5-dev
       if: startsWith(matrix.os, 'ubuntu')
-    - run: brew install autoconf automake
+    - run: brew install autoconf automake bison
       if: startsWith(matrix.os, 'macos')
     - name: Disable Firewall # Needed for TestSocket#test_udp_server in test-all
       if: startsWith(matrix.os, 'macos')
