@@ -60,6 +60,8 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu')
     - run: brew install autoconf automake bison
       if: startsWith(matrix.os, 'macos')
+    - run: echo "PATH=/usr/local/opt/bison/bin:$PATH" >> $GITHUB_ENV
+      if: startsWith(matrix.os, 'macos')
     - name: Disable Firewall # Needed for TestSocket#test_udp_server in test-all
       if: startsWith(matrix.os, 'macos')
       run: |
