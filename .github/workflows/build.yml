@@ -106,15 +106,13 @@ jobs:
     - uses: actions/checkout@v2
       with:
         path: test_files
+    - name: CLI Test
+      run: ruby test_files/cli_test.rb
     - run: mv test_files/Gemfile .
-    - run: ruby --version
     - run: ruby -e 'pp RbConfig::CONFIG'
     - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
-    - run: gem --version
-    - run: rake --version
     - run: ruby -ropen-uri -e 'puts URI.send(:open, "https://rubygems.org/") { |f| f.read(1024) }'
     - run: gem install json:2.2.0 --no-document
-    - run: bundle --version
     - run: bundle install
     - run: bundle exec rake --version
     - name: Subprocess test
