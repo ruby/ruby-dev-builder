@@ -5,6 +5,8 @@ on:
     - '*'
   schedule:
   - cron: '0 19 * * *'
+  workflow_dispatch:
+
 jobs:
   release:
     name: Create GitHub Release
