@@ -15,14 +15,14 @@ jobs:
       release_id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-      if: github.event_name == 'schedule'
+      if: contains(fromJSON('["schedule", "workflow_dispatch"]'), github.event_name)
     - name: Create tag
       id: create_tag
       run: |
-        if [[ "${{ github.event_name }}" == "schedule" ]]; then
+        if [[ "${{ github.event_name }}" == "schedule" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
           tag=v$(date +%Y%m%d.%H%M%S)
         else
           tag=$(basename "${{ github.ref }}")
@@ -71,7 +71,7 @@ jobs:
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
 
     - name: Clone Ruby
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: ruby/ruby
 
@@ -105,7 +105,7 @@ jobs:
     - run: make test-all TESTS="-j4"
 
     - run: echo "$HOME/.rubies/ruby-${{ matrix.name }}/bin" >> $GITHUB_PATH
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         path: test_files
     - name: CLI Test
