@@ -7,12 +7,48 @@ on:
   schedule:
   - cron: '0 19 * * *'
 jobs:
-  release:
-    name: Create GitHub Release
+  prepare:
+    name: Check if the latest ruby commit is already built
     runs-on: ubuntu-latest
     outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      should_build: ${{ steps.check_commit.outputs.result }}
+      commit: ${{ steps.latest_commit.outputs.commit }}
+    steps:
+    - name: Clone ruby
+      uses: actions/checkout@v3
+      with:
+        repository: ruby/ruby
+        path: ruby
+    - name: Set latest_commit
+      id: latest_commit
+      working-directory: ruby
+      run: echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Check if latest commit already built
+      uses: actions/github-script@v6
+      id: check_commit
+      with:
+        script: |
+          const latestDevCommit = "${{ steps.latest_commit.outputs.commit }}"
+          const { owner, repo } = context.repo
+          let { data: release } = await github.rest.repos.getLatestRelease({ owner, repo })
+          const latestReleaseCommit = release.body.split('@')[1]
+          console.log(`Latest release commit: ${latestReleaseCommit}`)
+          console.log(`Latest ruby commit: ${latestDevCommit}`)
+          if (latestReleaseCommit === latestDevCommit) {
+            return 'false'
+          } else {
+            return 'true'
+          }
+        result-encoding: string
+
+  release:
+    name: Create GitHub Release
+    needs: [prepare]
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
     - uses: actions/checkout@v3
       with:
@@ -29,19 +65,16 @@ jobs:
         fi
         echo "tag=$tag" >> $GITHUB_OUTPUT
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-      with:
-        tag_name: ${{ steps.tag.outputs.tag }}
-        release_name: ${{ steps.tag.outputs.tag }}
-        draft: true
-        prerelease: false
+      run: |
+        tag="${{ steps.tag.outputs.tag }}"
+        body="ruby/ruby@${{ needs.prepare.outputs.commit }}"
+        gh release create --draft "$tag" --title "$tag" --notes "$body"
 
   build:
-    needs: [release]
+    needs: [prepare, release]
     strategy:
       fail-fast: false
       matrix:
@@ -49,6 +82,12 @@ jobs:
         name: [ head, debug ]
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Clone ruby
+      uses: actions/checkout@v3
+      with:
+        repository: ruby/ruby
+        ref: ${{ needs.prepare.outputs.commit }}
+
     - name: Set platform
       id: platform
       run: |
@@ -56,6 +95,7 @@ jobs:
         platform=${platform/macos-*/macos-latest}
         echo "platform=$platform" >> $GITHUB_OUTPUT
 
+    # Build
     - name: apt-get update on Ubuntu
       run: sudo apt-get update
       if: startsWith(matrix.os, 'ubuntu')
@@ -70,11 +110,6 @@ jobs:
       run: |
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
-
-    - name: Clone Ruby
-      uses: actions/checkout@v3
-      with:
-        repository: ruby/ruby
 
     # ENABLE_PATH_CHECK=0: https://github.com/actions/virtual-environments/issues/267
     - name: Set configure flags (head)
@@ -122,25 +157,21 @@ jobs:
       run: ruby -e 'p RbConfig::CONFIG["cppflags"]; def Warning.warn(s); raise s; end; system RbConfig.ruby, "-e", "p :OK"'
 
     - name: Upload Built Ruby
-      uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.release.outputs.upload_url }}
-        asset_path: ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz
-        asset_name: ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz
-        asset_content_type: application/gzip
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
 
-  metadata:
+  publish:
     name: Publish Release
     needs: [release, build]
     runs-on: ubuntu-latest
     steps:
-    - uses: eregon/publish-release@v1
+    - name: Publish Release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        release_id: ${{ needs.release.outputs.release_id }}
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: gh release edit "${{ needs.release.outputs.tag }}" --draft=false
     - uses: eregon/keep-last-n-releases@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
