@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-arm-oss ]
         name: [ head, debug ]
     runs-on: ${{ matrix.os }}
     steps:
@@ -92,7 +92,8 @@ jobs:
       id: platform
       run: |
         platform=${{ matrix.os }}
-        platform=${platform/macos-*/macos-latest}
+        platform=${platform/macos-11/macos-latest}
+        platform=${platform/macos-arm-oss/macos-13-arm64}
         echo "platform=$platform" >> $GITHUB_OUTPUT
 
     # Build
