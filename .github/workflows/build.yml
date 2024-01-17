@@ -15,7 +15,7 @@ jobs:
       commit: ${{ steps.latest_commit.outputs.commit }}
     steps:
     - name: Clone ruby
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: ruby/ruby
         path: ruby
@@ -50,7 +50,7 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
       if: github.event_name != 'push'
@@ -83,7 +83,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Clone ruby
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: ruby/ruby
         ref: ${{ needs.prepare.outputs.commit }}
@@ -142,7 +142,7 @@ jobs:
     - run: make test-all TESTS="-j4"
 
     - run: echo "$HOME/.rubies/ruby-${{ matrix.name }}/bin" >> $GITHUB_PATH
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         path: test_files
     - name: CLI Test
