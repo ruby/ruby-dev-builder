@@ -113,8 +113,10 @@ jobs:
         sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
 
     # Check
-    - name: BASERUBY version
-      run: ruby --version
+    - name: Setup BASERUBY
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.2
 
     # ENABLE_PATH_CHECK=0: https://github.com/actions/virtual-environments/issues/267
     - name: Set configure flags (head)
