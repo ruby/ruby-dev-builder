@@ -114,7 +114,7 @@ jobs:
 
     # Check
     - name: Setup BASERUBY
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@master
       with:
         ruby-version: 3.2
 
