@@ -80,6 +80,8 @@ jobs:
       matrix:
         os: [ ubuntu-20.04, ubuntu-22.04, ubuntu-24.04, macos-11, macos-arm-oss ]
         name: [ head, debug ]
+        include:
+          - { os: ubuntu-24.04, name: asan }
     runs-on: ${{ matrix.os }}
     steps:
     - name: Clone ruby
@@ -87,6 +89,10 @@ jobs:
       with:
         repository: ruby/ruby
         ref: ${{ needs.prepare.outputs.commit }}
+    - name: Clone ruby-dev-builder
+      uses: actions/checkout@v4
+      with:
+        path: ruby-dev-builder
 
     - name: Set platform
       id: platform
@@ -128,6 +134,36 @@ jobs:
         echo "cppflags=-DENABLE_PATH_CHECK=0 -DRUBY_DEBUG=1" >> $GITHUB_ENV
         echo "optflags=-O3 -fno-inline" >> $GITHUB_ENV
       if: matrix.name == 'debug'
+    - name: Build dependencies and set configure flags (asan)
+      run: |
+        set -ex
+        # We only test ASAN with Clang. The version of Clang needs to be > 18, which the version in
+        # Ubuntu 24.04's repo is
+        sudo apt-get install -y clang
+
+        # ASAN builds need to compile (some of) their own dependencies with ASAN enabled, so that it can
+        # catch memory errors caused by passing invalid parameters into other libraries.
+        ASAN_LIB_PREFIX="$HOME/.rubies/ruby-${{ matrix.name }}"
+        ./ruby-dev-builder/asan_libs.rb \
+          --prefix="$ASAN_LIB_PREFIX" \
+          --cc=clang \
+          --cflags="-fsanitize=address -fno-omit-frame-pointer -ggdb3 -O3" \
+          --ldflags="-Wl,-rpath=$ASAN_LIB_PREFIX/lib" \
+          --makeopts="-j4"
+
+        # Set Ruby configure flags
+        # Clang > 17 does not work with M:N threading, so we disable it: https://bugs.ruby-lang.org/issues/20243
+        echo "cppflags=-DENABLE_PATH_CHECK=0 -DRUBY_DEBUG=1 -DVM_CHECK_MODE=1 -DUSE_MN_THREADS=0" >> $GITHUB_ENV
+        echo "optflags=-O3 -fno-omit-frame-pointer" >> $GITHUB_ENV
+        echo "debugflags=-fsanitize=address -ggdb3" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
+        # Make sure we link against the ASAN libs we built
+        echo "cflags=-I$ASAN_LIB_PREFIX/include" >> $GITHUB_ENV
+        echo "LDFLAGS=-L$ASAN_LIB_PREFIX/lib -Wl,-rpath=$ASAN_LIB_PREFIX/lib" >> $GITHUB_ENV
+        # Make the test timeouts more generous too (ASAN is slower)
+        echo "RUBY_TEST_TIMEOUT_SCALE=5" >> $GITHUB_ENV
+        echo "SYNTAX_SUGGEST_TIMEOUT=600" >> $GITHUB_ENV
+      if: matrix.name == 'asan'
 
     # Build
     - run: chmod 755 $HOME # https://github.com/actions/virtual-environments/issues/267
