@@ -166,7 +166,6 @@ jobs:
       if: matrix.name == 'asan'
 
     # Build
-    - run: chmod 755 $HOME # https://github.com/actions/virtual-environments/issues/267
     - run: mkdir -p ~/.rubies
     - run: ./autogen.sh
     - run: ./configure --prefix=$HOME/.rubies/ruby-${{ matrix.name }} --enable-shared --disable-install-doc --enable-yjit
