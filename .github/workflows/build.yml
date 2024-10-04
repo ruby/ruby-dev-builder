@@ -83,7 +83,6 @@ jobs:
         include:
           - { os: ubuntu-24.04, name: asan }
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.name == 'asan' }}
     steps:
     - name: Clone ruby
       uses: actions/checkout@v4
