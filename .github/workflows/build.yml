@@ -177,6 +177,11 @@ jobs:
 
     - name: Create archive
       run: tar czf ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz -C ~/.rubies ruby-${{ matrix.name }}
+    - name: Upload Built Ruby
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
 
     # Test
     - run: make test-spec MSPECOPT=-j
@@ -197,12 +202,6 @@ jobs:
     - run: bundle exec rake --version
     - name: Subprocess test
       run: ruby -e 'p RbConfig::CONFIG["cppflags"]; def Warning.warn(s); raise s; end; system RbConfig.ruby, "-e", "p :OK"'
-
-    - name: Upload Built Ruby
-      env:
-        GH_TOKEN: ${{ github.token }}
-        GH_REPO: ${{ github.repository }}
-      run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
 
   publish:
     name: Publish Release
