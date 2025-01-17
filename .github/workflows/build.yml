@@ -13,16 +13,26 @@ jobs:
     outputs:
       should_build: ${{ steps.check_commit.outputs.result }}
       commit: ${{ steps.latest_commit.outputs.commit }}
+      commit_3_4_asan: ${{ steps.latest_commit_3_4_asan.outputs.commit }}
     steps:
     - name: Clone ruby
       uses: actions/checkout@v4
       with:
         repository: ruby/ruby
         path: ruby
+        fetch-tags: true
+        fetch-depth: 0 # Workaround for https://github.com/actions/checkout/issues/1781
     - name: Set latest_commit
       id: latest_commit
       working-directory: ruby
       run: echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+    - name: Set latest commit (3.4-asan)
+      id: latest_commit_3_4_asan
+      working-directory: ruby
+      run: |
+        LATEST_TAG=$(git tag --list | grep -E "v3_4_[0-9]+$" | sort -V | tail -n1)
+        git checkout "$LATEST_TAG"
+        echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
     - name: Check if latest commit already built
       uses: actions/github-script@v7
@@ -30,11 +40,13 @@ jobs:
       with:
         script: |
           const latestDevCommit = "${{ steps.latest_commit.outputs.commit }}"
+          const latest34Asan = "${{ steps.latest_commit_3_4_asan.outputs.commit }}"
           const { owner, repo } = context.repo
           let { data: release } = await github.rest.repos.getLatestRelease({ owner, repo })
           const latestReleaseCommit = release.body.split('@')[1]
           console.log(`Latest release commit: ${latestReleaseCommit}`)
           console.log(`Latest ruby commit: ${latestDevCommit}`)
+          console.log(`Latest 3.4-asan: ${latest34Asan}`)
           if (latestReleaseCommit === latestDevCommit) {
             return 'false'
           } else {
@@ -82,6 +94,7 @@ jobs:
         name: [ head, debug ]
         include:
           - { os: ubuntu-24.04, name: asan }
+          - { os: ubuntu-24.04, name: 3.4-asan }
     runs-on: ${{ matrix.os }}
     steps:
     - name: Clone ruby
@@ -89,6 +102,13 @@ jobs:
       with:
         repository: ruby/ruby
         ref: ${{ needs.prepare.outputs.commit }}
+      if: matrix.name != '3.4-asan'
+    - name: Clone ruby (3.4-asan)
+      uses: actions/checkout@v4
+      with:
+        repository: ruby/ruby
+        ref: ${{ needs.prepare.outputs.commit_3_4_asan }}
+      if: matrix.name == '3.4-asan'
     - name: Clone ruby-dev-builder
       uses: actions/checkout@v4
       with:
@@ -163,7 +183,7 @@ jobs:
         # Make the test timeouts more generous too (ASAN is slower)
         echo "RUBY_TEST_TIMEOUT_SCALE=5" >> $GITHUB_ENV
         echo "SYNTAX_SUGGEST_TIMEOUT=600" >> $GITHUB_ENV
-      if: matrix.name == 'asan'
+      if: matrix.name == 'asan' || matrix.name == '3.4-asan'
 
     # Build
     - run: mkdir -p ~/.rubies
