@@ -1,6 +1,12 @@
 name: CRuby Dev Builds
+permissions:
+  contents: write
 on:
   workflow_dispatch:
+    inputs:
+      skip_slow:
+        type: boolean
+        default: false
   push:
     tags:
     - '*'
@@ -11,8 +17,11 @@ jobs:
     name: Check if the latest ruby commit is already built
     runs-on: ubuntu-latest
     outputs:
-      should_build: ${{ steps.check_commit.outputs.result }}
+      should_build: ${{ steps.check_commit.outputs.should_build }}
       commit: ${{ steps.latest_commit.outputs.commit }}
+      previous_release: ${{ steps.check_commit.outputs.previous_release }}
+      build_matrix: ${{ steps.matrix.outputs.build_matrix }}
+      reuse_matrix: ${{ steps.matrix.outputs.reuse_matrix }}
     steps:
     - name: Clone ruby
       uses: actions/checkout@v4
@@ -32,15 +41,32 @@ jobs:
           const latestDevCommit = "${{ steps.latest_commit.outputs.commit }}"
           const { owner, repo } = context.repo
           let { data: release } = await github.rest.repos.getLatestRelease({ owner, repo })
-          const latestReleaseCommit = release.body.split('@')[1]
+          const firstLine = release.body.split('\n')[0]
+          const latestReleaseCommit = firstLine.split('@')[1]
           console.log(`Latest release commit: ${latestReleaseCommit}`)
           console.log(`Latest ruby commit: ${latestDevCommit}`)
-          if (latestReleaseCommit === latestDevCommit) {
-            return 'false'
-          } else {
-            return 'true'
-          }
-        result-encoding: string
+          core.setOutput('should_build', latestReleaseCommit !== latestDevCommit)
+          core.setOutput('previous_release', release.tag_name)
+    - name: Compute build and reuse matrix
+      uses: actions/github-script@v7
+      id: matrix
+      with:
+        script: |
+          const osList = ['ubuntu-20.04', 'ubuntu-22.04', 'ubuntu-24.04', 'ubuntu-22.04-arm', 'ubuntu-24.04-arm', 'macos-13', 'macos-14']
+          const skipSlow = "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}"
+          const buildMatrix = JSON.stringify({
+            os: osList,
+            name: skipSlow === 'false' ? ['head', 'debug'] : ['head'],
+            ...(skipSlow === 'false' && { include: [{ os: 'ubuntu-24.04', name: 'asan' }] })
+          })
+          core.setOutput('build_matrix', buildMatrix)
+          const reuseMatrix = JSON.stringify({
+            os: osList,
+            name: ['debug'],
+            include: [{ os: 'ubuntu-24.04', name: 'asan' }]
+          })
+          core.setOutput('reuse_matrix', reuseMatrix)
+          console.log(`build_matrix: ${buildMatrix}, reuse_matrix: ${reuseMatrix}`)
 
   release:
     name: Create GitHub Release
@@ -64,6 +90,11 @@ jobs:
           tag=$(basename "${{ github.ref }}")
         fi
         echo "tag=$tag" >> $GITHUB_OUTPUT
+    - name: Set release description to built hash
+      run: echo "ruby/ruby@${{ needs.prepare.outputs.commit }}" >> release-description.md
+    - name: Append note if buils were reused
+      if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
+      run: echo "Skipped building and reused builds from ${{ needs.prepare.outputs.previous_release }} for debug and asan rubies" >> release-description.md
     - name: Create Release
       env:
         GH_TOKEN: ${{ github.token }}
@@ -71,17 +102,13 @@ jobs:
       run: |
         tag="${{ steps.tag.outputs.tag }}"
         body="ruby/ruby@${{ needs.prepare.outputs.commit }}"
-        gh release create --draft "$tag" --title "$tag" --notes "$body"
+        gh release create --draft "$tag" --title "$tag" --notes-file release-description.md
 
   build:
     needs: [prepare, release]
     strategy:
       fail-fast: false
-      matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm, macos-13, macos-14 ]
-        name: [ head, debug ]
-        include:
-          - { os: ubuntu-24.04, name: asan }
+      matrix: ${{ fromJson(needs.prepare.outputs.build_matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
     - name: Clone ruby
@@ -205,9 +232,36 @@ jobs:
         GH_REPO: ${{ github.repository }}
       run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
 
+  reuse-slow:
+    needs: [prepare, release]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.reuse_matrix) }}
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Set platform
+        id: platform
+        run: |
+          platform=${{ matrix.os }}
+          platform=${platform/macos-13/macos-latest}
+          platform=${platform/macos-14/macos-13-arm64}
+          platform=${platform/%-arm/-arm64}
+          echo "platform=$platform" >> $GITHUB_OUTPUT
+      - name: Download binaries from previous release
+        run: gh release download "${{ needs.prepare.outputs.previous_release }}" --pattern "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
+      - name: Re-upload Binaries
+        run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
+      - name: (Empty step for when reuse is not applied)
+        run: echo "Not reusing binaries. This step is a no-op." # We can't skip the whole job as publish depends on it, but we skip the uploading
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true') }}
+
   publish:
     name: Publish Release
-    needs: [release, build]
+    needs: [release, build, reuse-slow]
     runs-on: ubuntu-latest
     steps:
     - name: Publish Release
