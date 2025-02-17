@@ -252,6 +252,7 @@ jobs:
           echo "platform=$platform" >> $GITHUB_OUTPUT
       - name: Download binaries from previous release
         run: gh release download "${{ needs.prepare.outputs.previous_release }}" --pattern "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
       - name: Re-upload Binaries
         run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
