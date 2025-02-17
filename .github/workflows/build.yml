@@ -60,11 +60,11 @@ jobs:
               { os: osList, name: ['head'] }
           )
           core.setOutput('build_matrix', buildMatrix)
-          const reuseMatrix = JSON.stringify({
-            os: osList,
-            name: ['debug'],
-            include: [{ os: 'ubuntu-24.04', name: 'asan' }]
-          })
+          const reuseMatrix = JSON.stringify(
+            skipSlow === 'false' ?
+              { os: ['ubuntu-latest'], name: ['noop'] } : // GitHub doesn't like having an empty matrix, skips jobs that depend on reuse-slow
+              { os: osList, name: ['debug'], include: [{ os: 'ubuntu-24.04', name: 'asan' }] }
+          )
           core.setOutput('reuse_matrix', reuseMatrix)
           console.log(`build_matrix: ${buildMatrix}, reuse_matrix: ${reuseMatrix}`)
 
