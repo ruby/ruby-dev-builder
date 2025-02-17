@@ -54,11 +54,11 @@ jobs:
         script: |
           const osList = ['ubuntu-20.04', 'ubuntu-22.04', 'ubuntu-24.04', 'ubuntu-22.04-arm', 'ubuntu-24.04-arm', 'macos-13', 'macos-14']
           const skipSlow = "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}"
-          const buildMatrix = JSON.stringify({
-            os: osList,
-            name: skipSlow === 'false' ? ['head', 'debug'] : ['head'],
-            ...(skipSlow === 'false' && { include: [{ os: 'ubuntu-24.04', name: 'asan' }] })
-          })
+          const buildMatrix = JSON.stringify(
+            skipSlow === 'false' ?
+              { os: osList, name: ['head', 'debug'], include: [{ os: 'ubuntu-24.04', name: 'asan' }] } :
+              { os: osList, name: ['head'] }
+          )
           core.setOutput('build_matrix', buildMatrix)
           const reuseMatrix = JSON.stringify({
             os: osList,
