@@ -46,14 +46,14 @@ jobs:
       with:
         script: |
           const latestDevCommit = "${{ steps.latest_commit.outputs.commit }}"
-          const latest34Asan = "${{ steps.latest_commit_3_4_asan.outputs.commit }}"
+          const latest34ASan = "${{ steps.latest_commit_3_4_asan.outputs.commit }}"
           const { owner, repo } = context.repo
           let { data: release } = await github.rest.repos.getLatestRelease({ owner, repo })
           const firstLine = release.body.split('\n')[0]
           const latestReleaseCommit = firstLine.split('@')[1]
           console.log(`Latest release commit: ${latestReleaseCommit}`)
           console.log(`Latest ruby commit: ${latestDevCommit}`)
-          console.log(`Latest 3.4-asan: ${latest34Asan}`)
+          console.log(`Latest 3.4-asan: ${latest34ASan}`)
           core.setOutput('should_build', latestReleaseCommit !== latestDevCommit)
           core.setOutput('previous_release', release.tag_name)
     - name: Compute build and reuse matrix
