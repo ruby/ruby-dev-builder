@@ -262,13 +262,13 @@ jobs:
           echo "platform=$platform" >> $GITHUB_OUTPUT
       - name: Download binaries from previous release
         run: gh release download "${{ needs.prepare.outputs.previous_release }}" --pattern "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
+        if: matrix.name != 'noop'
       - name: Re-upload Binaries
         run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
+        if: matrix.name != 'noop'
       - name: (Empty step for when reuse is not applied)
         run: echo "Not reusing binaries. This step is a no-op." # We can't skip the whole job as publish depends on it, but we skip the uploading
-        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true') }}
+        if: matrix.name == 'noop'
 
   publish:
     name: Publish Release
