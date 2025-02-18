@@ -29,7 +29,6 @@ jobs:
       with:
         repository: ruby/ruby
         path: ruby
-        fetch-depth: 0
     - name: Set latest_commit
       id: latest_commit
       working-directory: ruby
@@ -38,7 +37,9 @@ jobs:
       id: latest_commit_3_4_asan
       working-directory: ruby
       run: |
-        git checkout ruby_3_4
+        git fetch origin --no-tags '+refs/tags/v3_4_*:refs/tags/v3_4_*'
+        LATEST_TAG=$(git tag --list | grep -E "v3_4_[0-9]+$" | sort -V | tail -n1)
+        git checkout "$LATEST_TAG"
         echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
     - name: Check if latest commit already built
       uses: actions/github-script@v7
