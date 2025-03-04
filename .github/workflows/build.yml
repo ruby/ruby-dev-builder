@@ -54,10 +54,10 @@ jobs:
           const latestReleaseCommit = release.body.split('\n')[0].split('@')[1].trim()
           // Entry in body may not exist, but if it doesn't the should_build_3_4_asan is still correct
           const latestRelease34ASanCommit = ((release.body.split('\n')[1] ?? "").split('@')[1] ?? "").trim()
-          console.log(`Latest release commit: ${latestReleaseCommit}`)
+          console.log(`         Latest release commit: ${latestReleaseCommit}`)
+          console.log(`            Latest ruby commit: ${latestDevCommit}`)
           console.log(`Latest 3.4-asan release commit: ${latestRelease34ASanCommit}`)
-          console.log(`Latest ruby commit: ${latestDevCommit}`)
-          console.log(`Latest 3.4-asan: ${latest34ASan}`)
+          console.log(`               Latest 3.4-asan: ${latest34ASan}`)
           core.setOutput('should_build', latestReleaseCommit !== latestDevCommit)
           core.setOutput('should_build_3_4_asan', latestRelease34ASanCommit !== latest34ASan)
           core.setOutput('previous_release', release.tag_name)
