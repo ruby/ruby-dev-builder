@@ -184,6 +184,8 @@ jobs:
       run: |
         echo "cppflags=-DENABLE_PATH_CHECK=0 -DRUBY_DEBUG=1" >> $GITHUB_ENV
         echo "optflags=-O3 -fno-inline" >> $GITHUB_ENV
+        # Make the test timeouts more generous (RUBY_DEBUG is slower, see https://bugs.ruby-lang.org/issues/21295)
+        echo "RUBY_TEST_TIMEOUT_SCALE=5" >> $GITHUB_ENV
       if: matrix.name == 'debug'
     - name: Build dependencies and set configure flags (asan)
       run: |
@@ -211,7 +213,7 @@ jobs:
         # Make sure we link against the ASAN libs we built
         echo "cflags=-I$ASAN_LIB_PREFIX/include" >> $GITHUB_ENV
         echo "LDFLAGS=-L$ASAN_LIB_PREFIX/lib -Wl,-rpath=$ASAN_LIB_PREFIX/lib" >> $GITHUB_ENV
-        # Make the test timeouts more generous too (ASAN is slower)
+        # Make the test timeouts more generous (ASAN is slower)
         echo "RUBY_TEST_TIMEOUT_SCALE=5" >> $GITHUB_ENV
         echo "SYNTAX_SUGGEST_TIMEOUT=600" >> $GITHUB_ENV
       if: matrix.name == 'asan' || matrix.name == '3.4-asan'
