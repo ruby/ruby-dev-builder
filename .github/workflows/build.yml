@@ -43,7 +43,7 @@ jobs:
         git checkout "$LATEST_TAG"
         echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
     - name: Check if latest commit already built
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       id: check_commit
       with:
         script: |
@@ -62,7 +62,7 @@ jobs:
           core.setOutput('should_build_3_4_asan', latestRelease34ASanCommit !== latest34ASan)
           core.setOutput('previous_release', release.tag_name)
     - name: Compute build and reuse matrix
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       id: matrix
       with:
         script: |
