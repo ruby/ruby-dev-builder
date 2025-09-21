@@ -279,24 +279,24 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - name: Set platform
-        id: platform
-        run: |
-          platform=${{ matrix.os }}
-          platform=${platform/macos-13/darwin-x64}
-          platform=${platform/macos-14/darwin-arm64}
-          platform=${platform/%.04/.04-x64}
-          platform=${platform/%.04-arm/.04-arm64}
-          echo "platform=$platform" >> $GITHUB_OUTPUT
-      - name: Download binaries from previous release
-        run: gh release download "${{ needs.prepare.outputs.previous_release }}" --pattern "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
-        if: matrix.name != 'noop'
-      - name: Re-upload Binaries
-        run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
-        if: matrix.name != 'noop'
-      - name: (Empty step for when reuse is not applied)
-        run: echo "Not reusing binaries. This step is a no-op." # We can't skip the whole job as publish depends on it, but we skip the uploading
-        if: matrix.name == 'noop'
+    - name: Set platform
+      id: platform
+      run: |
+        platform=${{ matrix.os }}
+        platform=${platform/macos-13/darwin-x64}
+        platform=${platform/macos-14/darwin-arm64}
+        platform=${platform/%.04/.04-x64}
+        platform=${platform/%.04-arm/.04-arm64}
+        echo "platform=$platform" >> $GITHUB_OUTPUT
+    - name: Download binaries from previous release
+      run: gh release download "${{ needs.prepare.outputs.previous_release }}" --pattern "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
+      if: matrix.name != 'noop'
+    - name: Re-upload Binaries
+      run: gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
+      if: matrix.name != 'noop'
+    - name: (Empty step for when reuse is not applied)
+      run: echo "Not reusing binaries. This step is a no-op." # We can't skip the whole job as publish depends on it, but we skip the uploading
+      if: matrix.name == 'noop'
 
   publish:
     name: Publish Release
