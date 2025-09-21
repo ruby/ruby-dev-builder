@@ -283,9 +283,10 @@ jobs:
         id: platform
         run: |
           platform=${{ matrix.os }}
-          platform=${platform/macos-13/macos-latest}
-          platform=${platform/macos-14/macos-13-arm64}
-          platform=${platform/%-arm/-arm64}
+          platform=${platform/macos-13/darwin-x64}
+          platform=${platform/macos-14/darwin-arm64}
+          platform=${platform/%.04/.04-x64}
+          platform=${platform/%.04-arm/.04-arm64}
           echo "platform=$platform" >> $GITHUB_OUTPUT
       - name: Download binaries from previous release
         run: gh release download "${{ needs.prepare.outputs.previous_release }}" --pattern "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
