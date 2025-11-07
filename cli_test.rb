@@ -33,7 +33,7 @@ module CLITest
       re_version = '(\d{1,2}\.\d{1,2}\.\d{1,2}(\.[a-z0-9.]+)?)'
       @error = 0
       puts "\n#{DASH * 5} CLI Test #{DASH * 17}"
-      puts chk_cli("bundle -v",      /\ABundler version #{re_version}/)
+      puts chk_cli("bundle -v",      /\A#{re_version}/)
       puts chk_cli("gem --version",  /\A#{re_version}/)
       puts chk_cli("irb --version",  /\Airb +#{re_version}/)
       puts chk_cli("racc --version", /\Aracc version #{re_version}/)
