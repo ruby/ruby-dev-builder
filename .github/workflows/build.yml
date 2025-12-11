@@ -66,7 +66,7 @@ jobs:
       id: matrix
       with:
         script: |
-          const osList = ['ubuntu-22.04', 'ubuntu-24.04', 'ubuntu-22.04-arm', 'ubuntu-24.04-arm', 'macos-13', 'macos-14']
+          const osList = ['ubuntu-22.04', 'ubuntu-24.04', 'ubuntu-22.04-arm', 'ubuntu-24.04-arm', 'macos-15-intel', 'macos-14']
           const asanHead = { os: 'ubuntu-24.04', name: 'asan' }
           const asan34   = { os: 'ubuntu-24.04', name: '3.4-asan' }
           const skipSlow = "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}"
@@ -148,7 +148,7 @@ jobs:
       id: platform
       run: |
         platform=${{ matrix.os }}
-        platform=${platform/macos-13/darwin-x64}
+        platform=${platform/macos-15-intel/darwin-x64}
         platform=${platform/macos-14/darwin-arm64}
         platform=${platform/%.04/.04-x64}
         platform=${platform/%.04-arm/.04-arm64}
@@ -273,7 +273,7 @@ jobs:
       id: platform
       run: |
         platform=${{ matrix.os }}
-        platform=${platform/macos-13/darwin-x64}
+        platform=${platform/macos-15-intel/darwin-x64}
         platform=${platform/macos-14/darwin-arm64}
         platform=${platform/%.04/.04-x64}
         platform=${platform/%.04-arm/.04-arm64}
