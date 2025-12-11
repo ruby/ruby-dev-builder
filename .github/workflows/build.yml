@@ -148,12 +148,6 @@ jobs:
       id: platform
       run: |
         platform=${{ matrix.os }}
-        platform=${platform/macos-13/macos-latest}
-        platform=${platform/macos-14/macos-13-arm64}
-        platform=${platform/%-arm/-arm64}
-        echo "old_platform=$platform" >> $GITHUB_OUTPUT
-
-        platform=${{ matrix.os }}
         platform=${platform/macos-13/darwin-x64}
         platform=${platform/macos-14/darwin-arm64}
         platform=${platform/%.04/.04-x64}
@@ -264,10 +258,6 @@ jobs:
         GH_REPO: ${{ github.repository }}
       run: |
         gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz"
-        if [ "${{ steps.platform.outputs.old_platform }}" != "${{ steps.platform.outputs.platform }}" ]; then
-          mv "ruby-${{ matrix.name }}-${{ steps.platform.outputs.platform }}.tar.gz" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.old_platform }}.tar.gz"
-          gh release upload "${{ needs.release.outputs.tag }}" "ruby-${{ matrix.name }}-${{ steps.platform.outputs.old_platform }}.tar.gz"
-        fi
 
   reuse-slow:
     needs: [prepare, release]
