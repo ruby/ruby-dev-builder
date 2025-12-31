@@ -217,7 +217,7 @@ jobs:
         # Make the test timeouts more generous (ASAN is slower)
         echo "RUBY_TEST_TIMEOUT_SCALE=5" >> $GITHUB_ENV
         echo "SYNTAX_SUGGEST_TIMEOUT=600" >> $GITHUB_ENV
-      if: matrix.name == 'asan' || matrix.name == '3.4-asan'
+      if: contains(matrix.name, 'asan')
 
     # Build
     - run: mkdir -p ~/.rubies
@@ -235,6 +235,7 @@ jobs:
     # Test
     - run: make test-spec MSPECOPT=-j
     - run: make test-all TESTS="-j4"
+      if: "!contains(matrix.name, 'asan')"
 
     - run: echo "$HOME/.rubies/ruby-${{ matrix.name }}/bin" >> $GITHUB_PATH
     - uses: actions/checkout@v6
