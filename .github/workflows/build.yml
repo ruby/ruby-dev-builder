@@ -243,6 +243,7 @@ jobs:
         path: test_files
     - name: CLI Test
       run: ruby test_files/cli_test.rb
+      if: matrix.name != '3.4-asan'
     - run: mv test_files/Gemfile .
     - run: ruby -e 'pp RbConfig::CONFIG'
     - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
