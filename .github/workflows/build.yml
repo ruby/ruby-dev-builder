@@ -38,8 +38,8 @@ jobs:
       id: latest_release_commit
       working-directory: ruby
       run: |
-        git fetch origin --depth=1 --no-tags '+refs/tags/v3_4_*:refs/tags/v3_4_*'
-        LATEST_TAG=$(git tag --list | grep -E "v3_4_[0-9]+$" | sort -V | tail -n1)
+        git fetch origin --depth=1 --no-tags '+refs/tags/v4.0.*:refs/tags/v4.0.*'
+        LATEST_TAG=$(git tag --list | grep -E 'v4\.0\.[0-9]+$' | sort -V | tail -n1)
         git checkout "$LATEST_TAG"
         echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
     - name: Check if latest commit already built
