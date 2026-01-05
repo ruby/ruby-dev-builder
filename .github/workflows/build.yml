@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.check_commit.outputs.should_build }}
-      should_build_3_4_asan: ${{ steps.check_commit.outputs.should_build_3_4_asan }}
+      should_build_asan_release: ${{ steps.check_commit.outputs.should_build_asan_release }}
       commit: ${{ steps.latest_commit.outputs.commit }}
-      commit_3_4_asan: ${{ steps.latest_commit_3_4_asan.outputs.commit }}
+      latest_release_commit: ${{ steps.latest_release_commit.outputs.commit }}
       previous_release: ${{ steps.check_commit.outputs.previous_release }}
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       reuse_matrix: ${{ steps.matrix.outputs.reuse_matrix }}
@@ -34,8 +34,8 @@ jobs:
       id: latest_commit
       working-directory: ruby
       run: echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-    - name: Set latest commit (3.4-asan)
-      id: latest_commit_3_4_asan
+    - name: Set latest commit (asan-release)
+      id: latest_release_commit
       working-directory: ruby
       run: |
         git fetch origin --depth=1 --no-tags '+refs/tags/v3_4_*:refs/tags/v3_4_*'
@@ -47,19 +47,19 @@ jobs:
       id: check_commit
       with:
         script: |
-          const latestDevCommit = "${{ steps.latest_commit.outputs.commit }}"
-          const latest34ASan = "${{ steps.latest_commit_3_4_asan.outputs.commit }}"
+          const latestMasterCommit = "${{ steps.latest_commit.outputs.commit }}"
+          const latestReleaseCommit = "${{ steps.latest_release_commit.outputs.commit }}"
           const { owner, repo } = context.repo
           let { data: release } = await github.rest.repos.getLatestRelease({ owner, repo })
-          const latestBuildCommit = release.body.split('\n')[0].split('@')[1].trim()
-          // Entry in body may not exist, but if it doesn't the should_build_3_4_asan is still correct
-          const latestBuild34ASanCommit = ((release.body.split('\n')[1] ?? "").split('@')[1] ?? "").trim()
-          console.log(`         Latest build commit: ${latestBuildCommit}`)
-          console.log(`          Latest ruby commit: ${latestDevCommit}`)
-          console.log(`Latest 3.4-asan build commit: ${latestBuild34ASanCommit}`)
-          console.log(`             Latest 3.4-asan: ${latest34ASan}`)
-          core.setOutput('should_build', latestBuildCommit !== latestDevCommit)
-          core.setOutput('should_build_3_4_asan', latestBuild34ASanCommit !== latest34ASan)
+          const latestBuild = release.body.split('\n')[0].split('@')[1].trim()
+          // Entry in body may not exist, but if it doesn't the should_build_asan_release is still correct
+          const latestBuildAsanRelease = ((release.body.split('\n')[1] ?? "").split('@')[1] ?? "").trim()
+          console.log(`             Latest build: ${latestBuild}`)
+          console.log(`     Latest master commit: ${latestMasterCommit}`)
+          console.log(`Latest asan-release build: ${latestBuildAsanRelease}`)
+          console.log(`    Latest release commit: ${latestReleaseCommit}`)
+          core.setOutput('should_build', latestBuild !== latestMasterCommit)
+          core.setOutput('should_build_asan_release', latestBuildAsanRelease !== latestReleaseCommit)
           core.setOutput('previous_release', release.tag_name)
     - name: Compute build and reuse matrix
       uses: actions/github-script@v8
@@ -68,20 +68,20 @@ jobs:
         script: |
           const osList = ['ubuntu-22.04', 'ubuntu-24.04', 'ubuntu-22.04-arm', 'ubuntu-24.04-arm', 'macos-15-intel', 'macos-14']
           const asanHead = { os: 'ubuntu-24.04', name: 'asan' }
-          const asan34   = { os: 'ubuntu-24.04', name: '3.4-asan' }
+          const asanRelease = { os: 'ubuntu-24.04', name: 'asan-release' }
           const skipSlow = "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}"
-          const skip34ASan = "${{ steps.check_commit.outputs.should_build_3_4_asan == 'false' }}"
+          const skipAsanRelease = "${{ steps.check_commit.outputs.should_build_asan_release == 'false' }}"
           const buildMatrix = JSON.stringify(
             skipSlow === 'false' ?
-              { os: osList, name: ['head', 'debug'], include: (skip34ASan === 'true' ? [asanHead] : [asanHead, asan34]) } :
+              { os: osList, name: ['head', 'debug'], include: (skipAsanRelease === 'true' ? [asanHead] : [asanHead, asanRelease]) } :
               { os: osList, name: ['head'] }
           )
           core.setOutput('build_matrix', buildMatrix)
           // Note: GitHub doesn't like having an empty matrix, so make sure at least noop is left
           const reuseMatrix = JSON.stringify(
             skipSlow === 'false' ?
-              (skip34ASan === 'true' ? { include: [asan34] } : { os: ['ubuntu-latest'], name: ['noop'] }) :
-              { os: osList, name: ['debug'], include: [asanHead, asan34] }
+              (skipAsanRelease === 'true' ? { include: [asanRelease] } : { os: ['ubuntu-latest'], name: ['noop'] }) :
+              { os: osList, name: ['debug'], include: [asanHead, asanRelease] }
           )
           core.setOutput('reuse_matrix', reuseMatrix)
           console.log(`build_matrix: ${buildMatrix}, reuse_matrix: ${reuseMatrix}`)
@@ -110,11 +110,11 @@ jobs:
         echo "tag=$tag" >> $GITHUB_OUTPUT
     - name: Set release description to built hash
       run: echo "master ➜ ruby/ruby@${{ needs.prepare.outputs.commit }}" >> release-description.md
-    - name: Set release description to 3.4-asan built hash
-      run: echo "3.4-asan ➜ ruby/ruby@${{ needs.prepare.outputs.commit_3_4_asan }}" >> release-description.md
-    - name: Append note if 3.4-asan build was reused
-      if: ${{ needs.prepare.outputs.should_build_3_4_asan == 'false' }}
-      run: echo "Skipped building and reused build from ${{ needs.prepare.outputs.previous_release }} for 3.4-asan ruby" >> release-description.md
+    - name: Set release description to asan-release built hash
+      run: echo "asan-release ➜ ruby/ruby@${{ needs.prepare.outputs.latest_release_commit }}" >> release-description.md
+    - name: Append note if asan-release build was reused
+      if: ${{ needs.prepare.outputs.should_build_asan_release == 'false' }}
+      run: echo "Skipped building and reused build from ${{ needs.prepare.outputs.previous_release }} for asan-release ruby" >> release-description.md
     - name: Append note if builds were reused
       if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}
       run: echo "Skipped building and reused builds from ${{ needs.prepare.outputs.previous_release }} for debug and asan rubies" >> release-description.md
@@ -138,7 +138,7 @@ jobs:
       uses: actions/checkout@v6
       with:
         repository: ruby/ruby
-        ref: ${{ matrix.name != '3.4-asan' && needs.prepare.outputs.commit || needs.prepare.outputs.commit_3_4_asan }}
+        ref: ${{ matrix.name != 'asan-release' && needs.prepare.outputs.commit || needs.prepare.outputs.latest_release_commit }}
     - name: Clone ruby-dev-builder
       uses: actions/checkout@v6
       with:
@@ -243,7 +243,7 @@ jobs:
         path: test_files
     - name: CLI Test
       run: ruby test_files/cli_test.rb
-      if: matrix.name != '3.4-asan'
+      if: matrix.name != 'asan-release'
     - run: mv test_files/Gemfile .
     - run: ruby -e 'pp RbConfig::CONFIG'
     - run: ruby --yjit -e 'exit RubyVM::YJIT.enabled?'
