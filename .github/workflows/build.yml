@@ -51,15 +51,15 @@ jobs:
           const latest34ASan = "${{ steps.latest_commit_3_4_asan.outputs.commit }}"
           const { owner, repo } = context.repo
           let { data: release } = await github.rest.repos.getLatestRelease({ owner, repo })
-          const latestReleaseCommit = release.body.split('\n')[0].split('@')[1].trim()
+          const latestBuildCommit = release.body.split('\n')[0].split('@')[1].trim()
           // Entry in body may not exist, but if it doesn't the should_build_3_4_asan is still correct
-          const latestRelease34ASanCommit = ((release.body.split('\n')[1] ?? "").split('@')[1] ?? "").trim()
-          console.log(`         Latest release commit: ${latestReleaseCommit}`)
-          console.log(`            Latest ruby commit: ${latestDevCommit}`)
-          console.log(`Latest 3.4-asan release commit: ${latestRelease34ASanCommit}`)
-          console.log(`               Latest 3.4-asan: ${latest34ASan}`)
-          core.setOutput('should_build', latestReleaseCommit !== latestDevCommit)
-          core.setOutput('should_build_3_4_asan', latestRelease34ASanCommit !== latest34ASan)
+          const latestBuild34ASanCommit = ((release.body.split('\n')[1] ?? "").split('@')[1] ?? "").trim()
+          console.log(`         Latest build commit: ${latestBuildCommit}`)
+          console.log(`          Latest ruby commit: ${latestDevCommit}`)
+          console.log(`Latest 3.4-asan build commit: ${latestBuild34ASanCommit}`)
+          console.log(`             Latest 3.4-asan: ${latest34ASan}`)
+          core.setOutput('should_build', latestBuildCommit !== latestDevCommit)
+          core.setOutput('should_build_3_4_asan', latestBuild34ASanCommit !== latest34ASan)
           core.setOutput('previous_release', release.tag_name)
     - name: Compute build and reuse matrix
       uses: actions/github-script@v8
