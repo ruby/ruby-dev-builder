@@ -67,21 +67,22 @@ jobs:
       with:
         script: |
           const osList = ['ubuntu-22.04', 'ubuntu-24.04', 'ubuntu-26.04', 'ubuntu-22.04-arm', 'ubuntu-24.04-arm', 'ubuntu-26.04-arm', 'macos-15-intel', 'macos-14']
-          const asanHead = { os: 'ubuntu-24.04', name: 'asan' }
-          const asanRelease = { os: 'ubuntu-24.04', name: 'asan-release' }
+          const asanOsList = ['ubuntu-24.04', 'ubuntu-26.04']
+          const asanHead = asanOsList.map(os => ({ os, name: 'asan' }))
+          const asanRelease = asanOsList.map(os => ({ os, name: 'asan-release' }))
           const skipSlow = "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.skip_slow == 'true' }}"
           const skipAsanRelease = "${{ steps.check_commit.outputs.should_build_asan_release == 'false' }}"
           const buildMatrix = JSON.stringify(
             skipSlow === 'false' ?
-              { os: osList, name: ['head', 'debug'], include: (skipAsanRelease === 'true' ? [asanHead] : [asanHead, asanRelease]) } :
+              { os: osList, name: ['head', 'debug'], include: (skipAsanRelease === 'true' ? asanHead : [...asanHead, ...asanRelease]) } :
               { os: osList, name: ['head'] }
           )
           core.setOutput('build_matrix', buildMatrix)
           // Note: GitHub doesn't like having an empty matrix, so make sure at least noop is left
           const reuseMatrix = JSON.stringify(
             skipSlow === 'false' ?
-              (skipAsanRelease === 'true' ? { include: [asanRelease] } : { os: ['ubuntu-latest'], name: ['noop'] }) :
-              { os: osList, name: ['debug'], include: [asanHead, asanRelease] }
+              (skipAsanRelease === 'true' ? { include: asanRelease } : { os: ['ubuntu-latest'], name: ['noop'] }) :
+              { os: osList, name: ['debug'], include: [...asanHead, ...asanRelease] }
           )
           core.setOutput('reuse_matrix', reuseMatrix)
           console.log(`build_matrix: ${buildMatrix}, reuse_matrix: ${reuseMatrix}`)
@@ -191,8 +192,8 @@ jobs:
     - name: Build dependencies and set configure flags (asan)
       run: |
         set -ex
-        # We only test ASAN with Clang. The version of Clang needs to be > 18, which the version in
-        # Ubuntu 24.04's repo is
+        # We only test ASAN with Clang. The version of Clang needs to be > 18, which the versions in
+        # Ubuntu 24.04's and 26.04's repos are
         sudo apt-get install -y clang
 
         # ASAN builds need to compile (some of) their own dependencies with ASAN enabled, so that it can
