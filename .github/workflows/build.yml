@@ -59,9 +59,7 @@ jobs:
           console.log(`Latest asan-release build: ${latestBuildAsanRelease}`)
           console.log(`    Latest release commit: ${latestReleaseCommit}`)
           core.setOutput('should_build', latestBuild !== latestMasterCommit)
-          // Temporary: build asan-release once so the latest release has it for ubuntu-26.04
-          const hasAsanRelease2604 = release.assets.some(asset => asset.name === 'ruby-asan-release-ubuntu-26.04-x64.tar.gz')
-          core.setOutput('should_build_asan_release', !hasAsanRelease2604 || latestBuildAsanRelease !== latestReleaseCommit)
+          core.setOutput('should_build_asan_release', latestBuildAsanRelease !== latestReleaseCommit)
           core.setOutput('previous_release', release.tag_name)
     - name: Compute build and reuse matrix
       uses: actions/github-script@v9
